@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mood Garden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#E3E8DE; --panel:#EDF0E8; --ink:#1D2821; --muted:#56645A; --rule:#C3CCBD;
+  --leaf:#2E6A44; --leaf-ink:#F2F6EF; --board:#F4F5F0; --edge:#FFFFFF; --shadow:rgba(18,30,22,.24);
+  --sans:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Instrument Serif", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121813; --panel:#19211B; --ink:#E1E8DE; --muted:#97A699; --rule:#2D3A30;
+    --leaf:#82C59A; --leaf-ink:#0F1A12; --board:#1F2721; --edge:#E9ECE6; --shadow:rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121813; --panel:#19211B; --ink:#E1E8DE; --muted:#97A699; --rule:#2D3A30;
+  --leaf:#82C59A; --leaf-ink:#0F1A12; --board:#1F2721; --edge:#E9ECE6; --shadow:rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground); color:var(--ink); font-family:var(--sans); font-size:16px; line-height:1.45}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--leaf); outline-offset:2px}
+
+header{display:flex; flex-wrap:wrap; gap:16px 28px; align-items:flex-end; padding:22px clamp(16px,3vw,36px) 18px; border-bottom:1px solid var(--rule)}
+.wordmark{font-weight:800; font-size:clamp(28px,3.4vw,44px); letter-spacing:-.03em; line-height:.95; margin:0}
+.wordmark span{font-family:var(--serif); font-weight:400; font-style:italic; letter-spacing:0}
+.brief{display:flex; gap:10px; align-items:flex-end; flex:1; min-width:280px; justify-content:flex-end; flex-wrap:wrap}
+.brief label{display:flex; flex-direction:column; gap:4px; font-size:14px; color:var(--muted); flex:1; max-width:380px; min-width:200px}
+.brief input[type=text]{background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:10px 12px; font-size:17px; color:var(--ink)}
+.plant{background:var(--leaf); color:var(--leaf-ink); border:0; border-radius:6px; padding:11px 22px; font-weight:600; font-size:17px; cursor:pointer}
+.plant:disabled{opacity:.5; cursor:not-allowed}
+
+main{display:grid; grid-template-columns:270px minmax(0,1fr); gap:0}
+@media (max-width:860px){ main{grid-template-columns:1fr} }
+
+.shelf{border-right:1px solid var(--rule); padding:20px clamp(16px,2vw,22px) 28px}
+@media (max-width:860px){ .shelf{border-right:0; border-bottom:1px solid var(--rule)} }
+.shelf h2{font-size:18px; margin:0 0 2px; font-weight:600}
+.shelf p.hint{margin:0 0 14px; font-size:14px; color:var(--muted)}
+.packets{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:860px){ .packets{display:flex; overflow-x:auto; padding-bottom:6px} .packet{flex:0 0 132px} }
+.packet{position:relative; text-align:left; background:var(--panel); border:1px solid var(--rule); border-radius:3px 3px 10px 10px; padding:0 0 10px; cursor:pointer; overflow:hidden; display:flex; flex-direction:column}
+.packet .bands{display:flex; height:46px}
+.packet .bands i{flex:1}
+.packet .bands::after{content:""}
+.packet strong{display:block; font-size:15px; line-height:1.15; padding:8px 10px 2px; font-weight:600}
+.packet small{display:block; padding:0 10px; font-size:12.5px; color:var(--muted); line-height:1.3}
+.packet[aria-pressed="true"]{border-color:var(--leaf); box-shadow:0 0 0 2px var(--leaf)}
+.packet .order{position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; background:var(--leaf); color:var(--leaf-ink); font-size:13px; font-weight:600; display:none; align-items:center; justify-content:center}
+.packet[aria-pressed="true"] .order{display:flex}
+.grow-box{margin:0 0 22px; padding:0 0 18px; border-bottom:1px solid var(--rule)}
+.grow-box .packets:empty{display:none}
+.next-step{flex-basis:100%; margin:0; font-size:15px; color:var(--leaf); font-weight:600; text-align:right}
+@media (max-width:860px){ .next-step{text-align:left} }
+.tool.suggest.nudge{box-shadow:0 0 0 3px var(--leaf); animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{50%{box-shadow:0 0 0 6px transparent}}
+@media (prefers-reduced-motion: reduce){ .tool.suggest.nudge{animation:none} }
+.seed-io{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.seed-io details summary{cursor:pointer; font-size:14px; color:var(--muted)}
+.seed-io textarea{width:100%; margin:8px 0; background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:8px; font:13px/1.4 ui-monospace, Menlo, Consolas, monospace; color:var(--ink); resize:vertical}
+.tool.suggest{width:100%; background:var(--ink); color:var(--ground); border-color:var(--ink); font-weight:600; margin-bottom:6px}
+.suggest-status{margin:0 0 10px; font-size:13.5px; color:var(--muted)}
+.suggest-status:empty{display:none}
+.packet .fit{position:absolute; top:6px; left:6px; background:var(--ink); color:var(--ground); font-size:11.5px; padding:1px 6px; border-radius:3px}
+.packet.grown{border-style:dashed}
+.shelf h2 + .hint{margin-top:2px}
+.seed-notes{margin-top:16px; display:flex; flex-direction:column; gap:10px}
+.seed-notes:empty{display:none}
+.seed-notes p{margin:0; font-size:14px; line-height:1.4; color:var(--muted)}
+.seed-notes strong{color:var(--ink); font-weight:600}
+.sketch-toggle{display:flex; gap:8px; align-items:center; margin-top:18px; font-size:14px; color:var(--muted)}
+
+.bed{padding:20px clamp(16px,3vw,36px) 40px; min-width:0}
+.toolbar{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:0 0 14px}
+.seg{display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden}
+.seg button{background:transparent; border:0; padding:7px 12px; font-size:14px; cursor:pointer; color:var(--muted)}
+.seg button + button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--ground)}
+.tool{background:transparent; border:1px solid var(--rule); border-radius:6px; padding:7px 12px; font-size:14px; cursor:pointer}
+.tool:disabled{opacity:.45; cursor:not-allowed}
+.spacer{flex:1}
+
+.notice{display:none; background:var(--panel); border-left:3px solid var(--leaf); padding:10px 14px; margin:0 0 14px; font-size:14px}
+.notice.on{display:block}
+
+.board{position:relative; width:100%; aspect-ratio:16/10; background:var(--board); border-radius:4px; overflow:hidden; box-shadow:0 1px 0 var(--rule), 0 18px 40px -24px var(--shadow)}
+.board.empty{display:flex; align-items:center; justify-content:center; text-align:center}
+.board .invite{max-width:30ch; color:var(--muted); font-size:17px}
+.board .invite em{font-family:var(--serif); font-size:30px; display:block; color:var(--ink); font-style:italic; line-height:1.1; margin-bottom:8px}
+
+.tile{position:absolute; margin:0; transform:rotate(var(--rot,0deg)); outline:none; background:var(--rule)}
+.tile img{width:100%; height:100%; object-fit:cover; display:block}
+.tile.t-bg{z-index:1}
+.tile.t-hero{z-index:2; box-shadow:0 10px 28px -8px var(--shadow)}
+.tile.t-mid{z-index:3; border:3px solid var(--edge); box-shadow:0 8px 20px -6px var(--shadow)}
+.tile.t-small{z-index:4; border:3px solid var(--edge); box-shadow:0 6px 14px -4px var(--shadow)}
+@keyframes pulse{50%{transform:scale(1.8); opacity:.4}}
+.tile .tools{position:absolute; left:6px; bottom:6px; display:flex; gap:4px; opacity:0; transition:opacity .15s}
+.tile:hover .tools,.tile:focus-within .tools,.tile.show-tools .tools{opacity:1}
+.tile .tools button{background:rgba(20,28,22,.82); color:#F1F5EE; border:0; border-radius:4px; padding:4px 8px; font-size:12.5px; cursor:pointer; white-space:nowrap}
+.tile .tools button[aria-pressed="true"]{background:#F1F5EE; color:#14201A}
+.tile.t-small .tools{flex-direction:column; left:4px; bottom:4px}
+.tile .pin{position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; background:var(--leaf); border:2px solid var(--edge); display:none}
+.tile.pinned .pin{display:block}
+.tile.t-bg .pin{top:8px; right:8px}
+
+.card{position:absolute; z-index:5; display:flex; flex-direction:column; gap:6px; padding:4px 2px}
+.board.bleed .card{background:color-mix(in srgb, var(--board) 86%, transparent); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:12px 14px; border-radius:3px}
+.card .for{font-size:clamp(10px,1vw,13px); color:var(--muted); margin:0}
+.card .words{font-family:var(--serif); font-size:clamp(16px,2.1vw,30px); line-height:1.05; margin:0}
+.card .cross{font-size:clamp(10px,1vw,13px); margin:0; color:var(--muted)}
+.swatches{display:flex; gap:3px; margin-top:2px}
+.swatches div{flex:1; display:flex; flex-direction:column; gap:2px}
+.swatches span{display:block; height:clamp(18px,2.6vw,36px); border-radius:2px}
+.swatches code{font-family:var(--sans); font-size:clamp(8px,.8vw,11px); color:var(--muted)}
+
+.board.grid{aspect-ratio:auto; display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:14px}
+.board.grid .tile{position:relative; left:auto!important; top:auto!important; width:auto!important; height:auto!important; aspect-ratio:1; transform:none; border:0; box-shadow:none}
+.board.grid .card{position:relative; grid-column:1/-1; left:auto!important; top:auto!important; width:auto!important; flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px 24px; padding:6px 0 0}
+.board.grid .swatches{flex:1; min-width:240px}
+@media (max-width:600px){ .board.grid{grid-template-columns:repeat(3,1fr)} }
+
+.credits{margin-top:22px; border-top:1px solid var(--rule); padding-top:16px}
+.credits-head{display:flex; gap:12px; align-items:baseline; flex-wrap:wrap}
+.credits h2{font-size:18px; margin:0; font-weight:600}
+.credits ol{margin:12px 0 0; padding-left:22px; font-size:14px; color:var(--muted); columns:2 320px; column-gap:32px}
+.credits li{margin:0 0 8px; break-inside:avoid}
+.credits a{color:var(--ink)}
+.credits .empty{font-size:14px; color:var(--muted); margin:8px 0 0}
+
+.sprout{background:repeating-linear-gradient(135deg, var(--panel) 0 10px, var(--rule) 10px 11px)}
+.sprout::after{content:""; position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px; border-radius:50%; background:var(--leaf); animation:pulse 1.2s ease-in-out infinite}
+.sketch{width:100%; height:100%; display:flex; align-items:flex-end; padding:8px; font-family:var(--serif); font-style:italic; font-size:clamp(13px,1.2vw,18px); color:rgba(255,255,255,.92); text-shadow:0 1px 3px rgba(0,0,0,.4)}
+
+/* Nursery: seedlings grow here before they go on the board */
+.nursery{border:1px dashed var(--rule); border-radius:8px; padding:14px; margin:0 0 18px; background:var(--panel); transition:border-color .15s}
+.nursery.over{border-color:var(--leaf); box-shadow:inset 0 0 0 1px var(--leaf)}
+.nursery-head{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; margin:0 0 10px}
+.nursery-head h2{font-size:18px; margin:0; font-weight:600}
+.nursery-head p{margin:0; font-size:14px; color:var(--muted); flex:1; min-width:220px}
+.nursery-head .tools-row{display:flex; gap:8px; flex-wrap:wrap}
+.nursery .empty-note{margin:4px 0; font-size:14px; color:var(--muted)}
+.seedlings{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px}
+.seedling{background:var(--board); border:1px solid var(--rule); border-radius:6px; overflow:hidden; display:flex; flex-direction:column}
+.seedling.carrying{border-color:var(--leaf); box-shadow:0 0 0 2px var(--leaf)}
+.seedling .thumb{position:relative; aspect-ratio:4/3; background:var(--rule); cursor:grab; overflow:hidden}
+.seedling .thumb:active{cursor:grabbing}
+.seedling .thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.seedling .role{position:absolute; top:6px; left:6px; background:rgba(20,28,22,.82); color:#F1F5EE; font-size:12px; padding:2px 7px; border-radius:3px; pointer-events:none}
+.seedling .dropme{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--muted)}
+.seedling .body{padding:8px; display:flex; flex-direction:column; gap:6px}
+.seedling .from{margin:0; font-size:12.5px; color:var(--muted)}
+.seedling input[type=text]{width:100%; background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:6px 8px; font-size:14px; color:var(--ink)}
+.seedling .acts{display:flex; flex-wrap:wrap; gap:4px}
+.mini{flex:1; background:transparent; border:1px solid var(--rule); border-radius:4px; padding:5px 8px; font-size:13px; cursor:pointer; white-space:nowrap}
+.mini.go{background:var(--leaf); color:var(--leaf-ink); border-color:var(--leaf)}
+.mini:disabled{opacity:.45; cursor:not-allowed}
+.over{outline:3px dashed var(--leaf); outline-offset:-3px}
+
+/* Empty spots on the board */
+.tile.slot-empty{background:transparent; border:2px dashed var(--rule)!important; box-shadow:none; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--muted); font-size:clamp(10px,1vw,13px); cursor:pointer}
+.tile.t-bg.slot-empty{align-items:flex-start; justify-content:flex-start; padding:8px}
+.board.carrying .slot-empty, body.dragging .slot-empty{border-color:var(--leaf)!important; color:var(--leaf)}
+.board.carrying .tile{cursor:copy}
+.tile[draggable=true]{cursor:grab}
+@media (prefers-reduced-motion: reduce){ .sprout::after{animation:none} .tile .tools{transition:none} }
+</style>
+</head><body>
+<header>
+  <h1 class="wordmark">Mood <span>Garden</span></h1>
+  <div class="brief">
+    <label>What are you designing?
+      <input type="text" id="product" placeholder="a kettle, a speaker, a field radio" autocomplete="off">
+    </label>
+    <button class="plant" id="plantBtn" disabled>Plant</button>
+  </div>
+  <p class="next-step" id="nextStep" role="status"></p>
+</header>
+
+<main>
+  <aside class="shelf" aria-label="Seed shelf">
+    <div class="grow-box">
+      <h2>Seeds from your brief</h2>
+      <p class="hint" id="suggestHint">Type what you’re designing above, then grow seeds made for it.</p>
+      <button class="tool suggest" id="suggestBtn" disabled>Suggest seeds</button>
+      <p class="suggest-status" id="suggestStatus" role="status"></p>
+      <div class="packets" id="grownPackets"></div>
+      <div class="seed-io">
+        <button class="tool" id="copySeeds" hidden>Copy seeds</button>
+        <details id="pasteBox">
+          <summary>Paste seeds</summary>
+          <textarea id="seedText" rows="5" placeholder="Paste seeds copied from another Mood Garden"></textarea>
+          <button class="tool" id="addSeeds">Add seeds</button>
+        </details>
+      </div>
+    </div>
+    <h2>Seed library</h2>
+    <p class="hint">Pick up to three seeds from either group. The first seed sets the soil and the background.</p>
+    <div class="packets" id="packets"></div>
+    <div class="seed-notes" id="seedNotes" aria-live="polite"></div>
+    <label class="sketch-toggle"><input type="checkbox" id="sketchMode" checked> Plant sketches only (live images need the downloaded or hosted version)</label>
+  </aside>
+
+  <section class="bed" aria-label="Garden">
+    <section class="nursery" id="nursery" aria-label="Nursery">
+      <div class="nursery-head">
+        <h2>Nursery</h2>
+        <p>Seedlings grow here first. Change a seedling’s words and re-pollinate it, or drop in your own image. Then drag it onto the board, or press Place and tap a spot.</p>
+        <div class="tools-row">
+          <button class="tool" id="addOwnBtn">Add your own images</button>
+          <button class="tool" id="repollNursery" disabled>Re-pollinate nursery</button>
+          <input type="file" id="addOwnInput" accept="image/*" multiple hidden>
+        </div>
+      </div>
+      <p class="empty-note" id="nurseryEmpty"></p>
+      <div class="seedlings" id="seedlings"></div>
+    </section>
+
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Layout" id="layoutSeg">
+        <button data-layout="auto" aria-pressed="true">Seed’s soil</button>
+        <button data-layout="block" aria-pressed="false">Block</button>
+        <button data-layout="bleed" aria-pressed="false">Full bleed</button>
+        <button data-layout="grid" aria-pressed="false">Grid</button>
+      </div>
+      <button class="tool" id="mirrorBtn" disabled>Mirror layout</button>
+      <span class="spacer"></span>
+      <button class="tool" id="arrangeBtn" disabled>Arrange all</button>
+      <button class="tool" id="clearBtn" disabled>Clear board</button>
+    </div>
+    <div class="notice" id="notice" role="status"></div>
+    <div class="board empty" id="board"></div>
+
+    <div class="credits">
+      <div class="credits-head">
+        <h2>Sources</h2>
+        <button class="tool" id="copyCredits" disabled>Copy credits</button>
+      </div>
+      <ol id="creditList"></ol>
+      <p class="empty" id="creditEmpty">Every image you place on the board is listed here with its creator and license.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- Seeds ---------- */
+const SEEDS = [
+  {id:"birch", name:"Nordic Birch", soil:"block", palette:["#E8E4DA","#C8BEAC","#8B9B8F","#45514E","#D5C39D"],
+   words:["quiet","pale","felted"],
+   desc:"Scandinavian winter calm: pale birch and ash wood, felted wool, snow light, soft matte surfaces, and a muted sage palette.",
+   terms:{bg:["birch forest snow","fjord morning","snowy pine forest","nordic winter"], hero:["birch bark","frozen lake","wooden sauna","nordic cabin"], mid:["felted wool","pale oak","snow cabin","linen fabric","ash wood","white ceramic cup"], small:["birch bark texture","wool yarn","frost crystals","wood grain","snowflake macro","linen texture"]}},
+  {id:"ceramic", name:"Worn Ceramic", soil:"block", palette:["#EEE5D6","#C98B5E","#A35A3B","#6E7D72","#2F2A26"],
+   words:["handled","earthen","glazed"],
+   desc:"A potter’s studio: hand thrown stoneware, terracotta, ash glazes, and kiln marks, with the warmth of clay stained hands.",
+   terms:{bg:["pottery studio","red clay","pottery workshop","terracotta roof"], hero:["glazed pottery","kiln fire","stoneware vase","pottery wheel"], mid:["hands shaping clay","terracotta","stoneware bowls","clay pots","raku pottery","pottery shelf"], small:["crackle glaze","clay texture","ash glaze","glaze drip","fired clay","speckled glaze"]}},
+  {id:"instrument", name:"Field Instrument", soil:"block", palette:["#E2DFD3","#B08D57","#5C6B5E","#2C3A3A","#C74B2B"],
+   words:["calibrated","rugged","precise"],
+   desc:"Survey and field gear: brass, knurled steel, bakelite, and engraved scales, built to be read precisely outdoors.",
+   terms:{bg:["topographic map","weather station","mountain survey","nautical chart"], hero:["brass compass","sextant","pocket watch","barometer"], mid:["surveyor tripod","vintage radio dial","theodolite","field binoculars","gauge dial","telegraph key"], small:["knurled metal","engraved scale","bakelite","brass texture","rivets","dial numbers"]}},
+  {id:"acid", name:"Acid Toy", soil:"block", palette:["#FF3EA5","#FFE600","#00D8C0","#6A1BFF","#1B1B1B"],
+   words:["loud","squishy","synthetic"],
+   desc:"Loud synthetic play: neon candy colors, inflatable vinyl, gummy translucency, and glossy rubber you want to squeeze.",
+   terms:{bg:["neon lights blur","candy shop","arcade lights","colorful balloons"], hero:["inflatable pool toy","gummy candy","rubber duck","lollipop"], mid:["playground slide","bubble gum","bouncy castle","plastic toys","jelly sandals","slime"], small:["glitter","translucent plastic","rubber texture","sprinkles","holographic","bubble wrap"]}},
+  {id:"nocturne", name:"Nocturne", soil:"bleed", palette:["#0E1424","#24324F","#5A6E8C","#C9B98A","#E7E3D6"],
+   words:["hushed","after hours","lit"],
+   desc:"The city after hours: fog, wet streets, and sodium and neon light pooling in the dark, quiet and a little cinematic.",
+   terms:{bg:["night city fog","night sky long exposure","city night rain","night street"], hero:["full moon","streetlight rain","lit window","neon sign"], mid:["neon reflection puddle","night train","window light night","taxi night","diner night","subway platform"], small:["dark velvet","rain on glass","smoked glass","bokeh lights","wet asphalt","night shadows"]}},
+  {id:"concrete", name:"Brutal Concrete", soil:"block", palette:["#D9D7D2","#A9A6A0","#6D6B67","#3A3936","#B45A33"],
+   words:["massive","honest","cast"],
+   desc:"Brutalist mass: board formed concrete, raw steel, and deep shadow, honest materials shown exactly as they were made.",
+   terms:{bg:["brutalist architecture","concrete wall","concrete building","parking garage"], hero:["concrete stairs shadow","brutalist building","concrete bunker","concrete arch"], mid:["formwork","gravel","raw steel beam","concrete bench","rebar","concrete pillar"], small:["concrete texture","rusted steel","aggregate stone","board formed concrete","weathered metal","cracked concrete"]}},
+  {id:"fog", name:"Fog Coast", soil:"bleed", palette:["#DDE3E1","#A9B8B6","#6F8784","#38494A","#C9B48E"],
+   words:["salted","drifting","weathered"],
+   desc:"A cold northern coast: drifting sea fog, driftwood, sea glass, and salt worn rope, everything softened and weathered.",
+   terms:{bg:["sea fog","foggy coastline","misty beach","grey ocean"], hero:["driftwood","lighthouse fog","fishing boat","rocky shore"], mid:["sea glass","kelp","tide pool","beach stones","fishing net","dock pilings"], small:["sea glass closeup","salt crust","weathered rope","barnacles","pebbles","weathered wood"]}},
+  {id:"desert", name:"Desert Bloom", soil:"block", palette:["#F0DFC4","#E0A36B","#C4633F","#7E8B5A","#3B2E28"],
+   words:["sunbaked","sparse","blooming"],
+   desc:"Desert after rain: sunbaked sand and adobe, sparse agave and cactus, and sudden bright blooms against dusty earth.",
+   terms:{bg:["desert dunes","sandstone canyon","desert sunset","red rock"], hero:["cactus flower","agave","saguaro","desert bloom"], mid:["adobe wall","dried flowers","desert road","succulents","joshua tree","desert pottery"], small:["sand ripples","cracked earth","cactus spines","sandstone texture","dried grass","terracotta texture"]}}
+];
+const seedById = id => SEEDS.find(s => s.id === id) || state.grown.find(s => s.id === id);
+
+/* ---------- Layout templates (percent of board) ---------- */
+const SLOTS = ["bg","hero","mid1","mid2","mid3","s1","s2","s3","s4","s5"];
+const tierOf = slot => slot === "bg" ? "bg" : slot === "hero" ? "hero" : slot.startsWith("mid") ? "mid" : "small";
+const TEMPLATES = {
+  block:{
+    bg:[3,5,62,80,0], hero:[44,20,32,46,-1.5],
+    mid1:[7,57,21,31,2], mid2:[72,6,17,28,-2], mid3:[22,10,17,24,1.5],
+    s1:[29,67,11,17,-3], s2:[58,66,10,16,2.5], s3:[86,30,9,15,-2], s4:[12,34,10,15,3], s5:[79,46,8,13,-1],
+    card:[68,70,29,24]
+  },
+  bleed:{
+    bg:[0,0,100,100,0], hero:[46,12,32,48,-1],
+    mid1:[6,52,22,34,2], mid2:[74,8,18,30,-2.5], mid3:[14,8,18,26,1.5],
+    s1:[31,62,11,17,-3], s2:[60,50,10,16,2], s3:[84,42,9,15,-2], s4:[4,30,10,15,3], s5:[44,66,9,14,-1.5],
+    card:[64,70,32,25]
+  }
+};
+
+/* ---------- State ---------- */
+const state = {
+  selected:[], product:"", layout:"auto", flip:false, grown:[], fits:[],
+  seedlings:[], board:{}, carrying:null,
+  pools:{}, used:new Set(), swatches:[], boardMean:null
+};
+
+/* ---------- Helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const shuffle = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+const hexToRgb = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgbToHex = c => "#" + c.map(v => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
+const lum = c => .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const STOP = new Set(["the","and","for","with","new","design","product","small","big","portable"]);
+function productWords(){ return state.product.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !STOP.has(w)); }
+
+function notice(msg){ const n = $("#notice"); n.textContent = msg || ""; n.classList.toggle("on", !!msg); }
+
+const LICENSES = {cc0:"CC0", pdm:"Public Domain Mark", by:"CC BY", "by-sa":"CC BY-SA", "by-nd":"CC BY-ND", "by-nc":"CC BY-NC", "by-nc-sa":"CC BY-NC-SA", "by-nc-nd":"CC BY-NC-ND", sampling:"CC Sampling+", "nc-sampling":"CC NC-Sampling+"};
+function licenseLabel(it){ const base = LICENSES[it.license] || (it.license || "").toUpperCase(); return it.licenseVersion && !["cc0","pdm"].includes(it.license) ? base + " " + it.licenseVersion : base; }
+
+/* ---------- Openverse search ---------- */
+/* Anonymous Openverse access allows roughly one request per second, so requests wait their turn */
+let queueTail = Promise.resolve();
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function search(term, tier, page){
+  const run = queueTail.then(async () => {
+    for (let attempt = 0; ; attempt++){
+      try { const out = await searchOnce(term, tier, page); await wait(1100); return out; }
+      catch(e){
+        if (e.kind === "limited" && attempt < 3){ await wait(2500 * (attempt + 1)); continue; }
+        await wait(1100); throw e;
+      }
+    }
+  });
+  queueTail = run.catch(() => {});
+  return run;
+}
+async function searchOnce(term, tier, page){
+  const u = new URL("https://api.openverse.org/v1/images/");
+  u.searchParams.set("q", term);
+  u.searchParams.set("page", page);
+  u.searchParams.set("page_size", "20");
+  u.searchParams.set("mature", "false");
+  if (tier === "bg") u.searchParams.set("aspect_ratio", "wide");
+  if (tier === "small") u.searchParams.set("aspect_ratio", "square");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try{
+    const res = await fetch(u, {signal:ctrl.signal});
+    if (res.status === 429) { const e = new Error("limited"); e.kind = "limited"; throw e; }
+    if (!res.ok) { const e = new Error("http " + res.status); e.kind = "http"; throw e; }
+    const data = await res.json();
+    return (data.results || []).map(r => ({
+      id:r.id, src:r.url, thumb:r.thumbnail || ("https://api.openverse.org/v1/images/" + r.id + "/thumb/"),
+      title:r.title, creator:r.creator, creatorUrl:r.creator_url, license:r.license, licenseVersion:r.license_version,
+      licenseUrl:r.license_url, landing:r.foreign_landing_url, source:r.source || r.provider,
+      tags:(r.tags || []).map(t => (t.name || "").toLowerCase()), term
+    }));
+  } finally { clearTimeout(timer); }
+}
+
+function sketchItem(pool){
+  const p = pool.seed.palette;
+  const a = p[Math.floor(Math.random() * p.length)], b = p[Math.floor(Math.random() * p.length)];
+  const term = pool.terms[Math.floor(Math.random() * pool.terms.length)];
+  return {id:"sketch-" + Math.random().toString(36).slice(2), sketch:true, colors:[a, b], term, angle:Math.floor(Math.random() * 360)};
+}
+
+function getPool(seed, tier){
+  const key = seed.id + ":" + tier;
+  if (!state.pools[key]) state.pools[key] = {key, seed, tier, terms:shuffle(seed.terms[tier]), ti:0, pages:{}, items:[]};
+  return state.pools[key];
+}
+
+async function fillPool(pool){
+  const words = productWords();
+  for (let attempt = 0; attempt < pool.terms.length * 2; attempt++){
+    const term = pool.terms[pool.ti % pool.terms.length];
+    pool.ti++;
+    const page = (pool.pages[term] || 0) + 1;
+    pool.pages[term] = page;
+    const results = await search(term, pool.tier, page);
+    const fresh = results.filter(r => !state.used.has(r.id) && (pool.custom || !words.some(w => (r.title || "").toLowerCase().includes(w) || r.tags.includes(w))));
+    if (fresh.length){ pool.items.push(...shuffle(fresh)); return true; }
+  }
+  return false;
+}
+
+async function draw(pool){
+  if ($("#sketchMode").checked) return sketchItem(pool);
+  try{
+    while (pool.items.length && state.used.has(pool.items[0].id)) pool.items.shift();
+    if (!pool.items.length){ const ok = await fillPool(pool); if (!ok) return sketchItem(pool); }
+    return pool.items.shift();
+  } catch(e){
+    notice(e.kind === "limited"
+      ? "Openverse is limiting requests for a minute, so the garden planted sketches. Wait a moment, then re-pollinate."
+      : "The garden can’t reach Openverse right now, so it planted sketches. If you’re viewing this inside Claude, download the file and open it in your browser instead. (Details: " + (e.name === "AbortError" ? "request timed out" : (e.message || "network error")) + ")");
+    return sketchItem(pool);
+  }
+}
+
+/* ---------- Color sampling (best effort, needs CORS) ---------- */
+const sampleCache = new Map();
+function sample(url){
+  if (sampleCache.has(url)) return Promise.resolve(sampleCache.get(url));
+  return new Promise(resolve => {
+    const im = new Image();
+    if (!url.startsWith("data:")) im.crossOrigin = "anonymous";
+    const t = setTimeout(() => done(null), 4000);
+    function done(v){ clearTimeout(t); sampleCache.set(url, v); resolve(v); }
+    im.onload = () => {
+      try{
+        const c = document.createElement("canvas"); c.width = c.height = 16;
+        const x = c.getContext("2d"); x.drawImage(im, 0, 0, 16, 16);
+        const d = x.getImageData(0, 0, 16, 16).data, buckets = new Map();
+        for (let i = 0; i < d.length; i += 4){
+          const k = (d[i] >> 5) + "," + (d[i+1] >> 5) + "," + (d[i+2] >> 5);
+          const b = buckets.get(k) || {n:0, r:0, g:0, b:0};
+          b.n++; b.r += d[i]; b.g += d[i+1]; b.b += d[i+2]; buckets.set(k, b);
+        }
+        let best = null; for (const b of buckets.values()) if (!best || b.n > best.n) best = b;
+        done(best ? [best.r / best.n, best.g / best.n, best.b / best.n] : null);
+      } catch(e){ done(null); }
+    };
+    im.onerror = () => done(null);
+    im.src = url;
+  });
+}
+
+function fallbackPalette(){
+  const seeds = state.selected.map(seedById), out = [];
+  if (!seeds.length) return SEEDS[0].palette.slice();
+  for (let i = 0; out.length < 5; i++){ const s = seeds[i % seeds.length]; out.push(s.palette[i % 5]); if (i > 20) break; }
+  return out;
+}
+/* ---------- Seedling model ---------- */
+const TIER_LABEL = {bg:"Background", hero:"Hero", mid:"Middle", small:"Detail"};
+const BIG = ["bg","hero","mid1","mid2","mid3"];
+const uid = () => "s" + Math.random().toString(36).slice(2, 10);
+const byId = id => state.seedlings.find(s => s.id === id);
+const slotOf = id => SLOTS.find(k => state.board[k] === id) || null;
+const live = s => state.seedlings.includes(s);
+function newSeedling(tier){
+  return {id:uid(), home:null, tier, seedId:state.selected[0] || SEEDS[0].id, term:"", termEdited:false, item:null, loading:false};
+}
+function getTermPool(s){
+  const term = s.term.trim();
+  const key = "q:" + s.tier + ":" + term.toLowerCase();
+  if (!state.pools[key]) state.pools[key] = {key, seed:seedById(s.seedId) || SEEDS[0], tier:s.tier, terms:[term], ti:0, pages:{}, items:[], custom:true};
+  return state.pools[key];
+}
+function poolFor(s){
+  if (s.termEdited && s.term.trim()) return getTermPool(s);
+  return getPool(seedById(s.seedId) || SEEDS[0], s.tier);
+}
+
+async function computeSwatches(){
+  const picks = BIG.map(k => state.board[k] && byId(state.board[k])).filter(s => s && s.item && !s.item.sketch);
+  const sampled = (await Promise.all(picks.map(s => sample(s.item.thumb)))).filter(Boolean);
+  let colors = sampled.map(rgbToHex);
+  for (const h of fallbackPalette()){ if (colors.length >= 5) break; colors.push(h); }
+  colors = colors.slice(0, 5).sort((a, b) => lum(hexToRgb(b)) - lum(hexToRgb(a)));
+  state.swatches = colors;
+  const rgbs = colors.map(hexToRgb);
+  state.boardMean = rgbs.reduce((m, c) => [m[0] + c[0] / rgbs.length, m[1] + c[1] / rgbs.length, m[2] + c[2] / rgbs.length], [0,0,0]);
+  renderCard();
+}
+
+/* ---------- Planting into the nursery ---------- */
+function resolveLayout(){
+  if (state.layout !== "auto") return state.layout;
+  const first = seedById(state.selected[0]);
+  return first ? first.soil : "block";
+}
+
+async function plant(){
+  if (!state.selected.length) return;
+  notice(""); state.carrying = null;
+  state.product = $("#product").value.trim();
+  state.pools = {}; state.used = new Set();
+  state.flip = Math.random() < .5;
+  /* your own images survive a replant, along with their spots on the board */
+  const keep = state.seedlings.filter(s => s.item && s.item.own);
+  const keepIds = new Set(keep.map(s => s.id));
+  for (const k of SLOTS) if (state.board[k] && !keepIds.has(state.board[k])) delete state.board[k];
+  const seeds = state.selected.map(seedById);
+  const fresh = SLOTS.map((slot, i) => ({id:uid(), home:slot, tier:tierOf(slot), seedId:seeds[i % seeds.length].id, term:"", termEdited:false, item:null, loading:true}));
+  state.seedlings = [...fresh, ...keep];
+  state.swatches = fallbackPalette();
+  renderAll(); renderCredits();
+  await growSeedlings(fresh);
+}
+
+async function growSeedlings(list){
+  const groups = new Map();
+  for (const s of list){
+    const pool = poolFor(s);
+    if (!groups.has(pool.key)) groups.set(pool.key, {pool, items:[]});
+    groups.get(pool.key).items.push(s);
+  }
+  await Promise.all([...groups.values()].map(async g => {
+    for (const s of g.items){
+      if (!live(s)) continue;
+      const item = await draw(g.pool);
+      const old = s.item;
+      if (old && !old.sketch && !old.own) state.used.delete(old.id);
+      s.item = item; if (!item.sketch) state.used.add(item.id);
+      if (!s.termEdited) s.term = item.term;
+      s.loading = false; renderSeedling(s);
+    }
+  }));
+  renderCredits(); computeSwatches();
+}
+
+/* Re-pollinate one seedling: its typed words if it has any, otherwise its seed. Picks the candidate closest to the board's palette */
+async function repollinate(s){
+  if (!s || s.loading) return;
+  const pool = poolFor(s);
+  s.loading = true; renderSeedling(s);
+  const candidates = [];
+  for (let i = 0; i < 3; i++){
+    const c = await draw(pool);
+    candidates.push(c);
+    if (c.sketch) break;
+  }
+  let chosen = candidates[0];
+  if (state.boardMean && !chosen.sketch && candidates.length > 1){
+    const cols = await Promise.all(candidates.map(c => c.sketch ? null : sample(c.thumb)));
+    let bestD = Infinity;
+    candidates.forEach((c, i) => { if (cols[i]){ const d = dist(cols[i], state.boardMean); if (d < bestD){ bestD = d; chosen = c; } } });
+  }
+  candidates.filter(c => c !== chosen && !c.sketch).reverse().forEach(c => pool.items.unshift(c));
+  const old = s.item;
+  if (old && !old.sketch && !old.own) state.used.delete(old.id);
+  s.item = chosen; if (!chosen.sketch) state.used.add(chosen.id);
+  if (!s.termEdited) s.term = chosen.term;
+  s.loading = false;
+  renderSeedling(s); renderCredits();
+  if (BIG.includes(slotOf(s.id))) computeSwatches();
+}
+
+function repollinateNursery(){
+  const list = state.seedlings.filter(s => !slotOf(s.id) && !s.loading && !(s.item && s.item.own));
+  if (!list.length) return;
+  notice("");
+  list.forEach(s => { s.loading = true; renderSeedling(s); });
+  growSeedlings(list);
+}
+
+/* ---------- Your own images ---------- */
+function readImage(file){
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("unreadable"));
+    fr.onload = () => {
+      const im = new Image();
+      im.onerror = () => reject(new Error("unreadable"));
+      im.onload = () => {
+        const max = 1600, k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+        if (k === 1 && file.size < 2e6){ resolve(fr.result); return; }
+        const c = document.createElement("canvas");
+        c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        resolve(file.type === "image/png" ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", .88));
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function useOwnFile(s, file){
+  if (!s) return;
+  if (!file || !file.type.startsWith("image/")){ notice("That file isn’t an image. Try a JPG, PNG, WebP, or GIF."); return; }
+  s.loading = true; renderSeedling(s);
+  try{
+    const src = await readImage(file);
+    const old = s.item;
+    if (old && !old.sketch && !old.own) state.used.delete(old.id);
+    s.item = {id:uid(), own:true, src, thumb:src, title:file.name, term:s.term};
+    notice("");
+  } catch(e){ notice("That image couldn’t be read. Try saving it as a JPG or PNG first."); }
+  s.loading = false;
+  renderSeedling(s); renderCredits();
+  if (BIG.includes(slotOf(s.id))) computeSwatches();
+}
+
+function addOwnFiles(files){
+  const imgs = files.filter(f => f.type.startsWith("image/"));
+  if (!imgs.length){ notice("Those files aren’t images. Try a JPG, PNG, WebP, or GIF."); return; }
+  const made = imgs.map(f => { const s = newSeedling("mid"); state.seedlings.push(s); return [s, f]; });
+  renderAll();
+  made.forEach(([s, f]) => useOwnFile(s, f));
+}
+
+/* ---------- Arranging ---------- */
+function afterMove(){ renderAll(); computeSwatches(); renderCredits(); }
+
+function place(id, slot){
+  const s = byId(id); if (!s || !SLOTS.includes(slot)) return;
+  const from = slotOf(id), occupant = state.board[slot];
+  if (from) delete state.board[from];
+  if (occupant && occupant !== id && from) state.board[from] = occupant; /* swap on the board; otherwise the occupant goes back to the nursery */
+  state.board[slot] = id;
+  state.carrying = null; notice("");
+  afterMove();
+}
+function unplace(id){ const k = slotOf(id); if (k) delete state.board[k]; afterMove(); }
+function clearBoard(){ state.board = {}; state.carrying = null; notice(""); afterMove(); }
+
+function arrangeAll(){
+  const free = () => SLOTS.filter(k => !state.board[k]);
+  let left = 0;
+  for (const s of state.seedlings){
+    if (slotOf(s.id)) continue;
+    const f = free();
+    if (!f.length){ left++; continue; }
+    state.board[s.home && f.includes(s.home) ? s.home : (f.find(k => tierOf(k) === s.tier) || f[0])] = s.id;
+  }
+  state.carrying = null;
+  notice(left ? "The board is full, so " + left + (left === 1 ? " seedling stays" : " seedlings stay") + " in the nursery. Drag one onto a tile to swap them." : "");
+  afterMove();
+}
+
+function toggleCarry(id){
+  state.carrying = state.carrying === id ? null : id;
+  notice(state.carrying ? "Now tap a spot on the board to place it. A tile already there goes back to the nursery. Press Escape to cancel." : "");
+  renderAll();
+}
+
+/* ---------- Rendering ---------- */
+const INVITE = '<p class="invite"><em>Nothing planted yet.</em>Choose seeds, name what you’re designing, and press Plant. Seedlings grow in the nursery first, then you arrange them here.</p>';
+
+function slotRect(slot, layout){
+  const r = TEMPLATES[layout][slot].slice();
+  if (state.flip) r[0] = 100 - r[0] - r[2], r[4] = r[4] !== undefined ? -r[4] : r[4];
+  return r;
+}
+function positionEl(el, slot, layout){
+  if (layout === "grid") return;
+  const [x, y, w, h, rot] = slotRect(slot, layout);
+  el.style.left = x + "%"; el.style.top = y + "%"; el.style.width = w + "%"; el.style.height = h + "%";
+  el.style.setProperty("--rot", (rot || 0) + "deg");
+}
+
+function fillVisual(box, s, big){
+  if (s.loading) return;
+  if (!s.item){ box.insertAdjacentHTML("beforeend", '<span class="dropme">Drop an image here</span>'); return; }
+  if (s.item.sketch){
+    const d = document.createElement("div");
+    d.className = "sketch";
+    d.style.background = "linear-gradient(" + s.item.angle + "deg," + s.item.colors[0] + "," + s.item.colors[1] + ")";
+    d.textContent = s.item.term;
+    box.appendChild(d); return;
+  }
+  const img = document.createElement("img");
+  img.draggable = false; img.decoding = "async";
+  img.alt = s.item.own ? "Your image: " + (s.item.title || "") : (s.item.title || "Untitled") + (s.item.creator ? " by " + s.item.creator : "");
+  img.src = big ? s.item.src : s.item.thumb;
+  img.onerror = () => {
+    if (s.item.own) return;
+    if (img.dataset.fallback !== "1" && img.src !== s.item.thumb){ img.dataset.fallback = "1"; img.src = s.item.thumb; }
+    else if (!s.retried){ s.retried = true; repollinate(s).then(() => { s.retried = false; }); }
+  };
+  box.appendChild(img);
+}
+
+function seedlingCard(s){
+  const seed = seedById(s.seedId);
+  const el = document.createElement("article");
+  el.className = "seedling" + (state.carrying === s.id ? " carrying" : "");
+  el.dataset.id = s.id;
+  const thumb = document.createElement("div");
+  thumb.className = "thumb" + (s.loading ? " sprout" : "");
+  thumb.draggable = true;
+  thumb.title = "Drag onto the board, or drop an image file here to replace it";
+  fillVisual(thumb, s, false);
+  thumb.insertAdjacentHTML("beforeend", '<span class="role">' + TIER_LABEL[s.tier] + '</span>');
+  el.appendChild(thumb);
+  const body = document.createElement("div");
+  body.className = "body";
+  const from = s.item && s.item.own ? "Your image" + (s.item.title ? ", " + s.item.title : "") : (seed ? seed.name + " seed" : "");
+  body.innerHTML =
+    '<p class="from">' + esc(from) + '</p>' +
+    '<input type="text" data-f="term" aria-label="Words to grow this image from" placeholder="type words, then re-pollinate" value="' + esc(s.term) + '">' +
+    '<div class="acts">' +
+      '<button class="mini" data-act="repoll" data-f="repoll"' + (s.loading ? ' disabled' : '') + ' title="Grow a new image from these words">Re-pollinate</button>' +
+      '<button class="mini" data-act="own" data-f="own"' + (s.loading ? ' disabled' : '') + '>Your image</button>' +
+      '<button class="mini go" data-act="place" data-f="place" aria-pressed="' + (state.carrying === s.id) + '">' + (state.carrying === s.id ? "Cancel" : "Place") + '</button>' +
+    '</div>' +
+    '<input type="file" accept="image/*" hidden>';
+  el.appendChild(body);
+  return el;
+}
+
+function tileEl(s, slot){
+  const layout = resolveLayout(), tier = tierOf(slot);
+  const el = document.createElement("figure");
+  el.className = "tile t-" + tier + (s.loading ? " sprout" : "");
+  el.dataset.slot = slot;
+  el.tabIndex = 0;
+  el.draggable = true;
+  positionEl(el, slot, layout);
+  fillVisual(el, s, tier === "bg" || tier === "hero");
+  if (!s.loading){
+    const tools = document.createElement("div");
+    tools.className = "tools";
+    tools.innerHTML = '<button data-act="repoll" title="Grow a new image in this spot">Re-pollinate</button><button data-act="return" title="Send back to the nursery">Back to nursery</button>';
+    el.appendChild(tools);
+  }
+  el.title = s.item && s.item.own ? "Your image" : (seedById(s.seedId)?.name || "") + " seed: " + (s.term || "");
+  return el;
+}
+
+function emptySlotEl(slot){
+  const tier = tierOf(slot);
+  const el = document.createElement("figure");
+  el.className = "tile t-" + tier + " slot-empty";
+  el.dataset.slot = slot;
+  el.tabIndex = 0;
+  el.setAttribute("aria-label", "Empty " + TIER_LABEL[tier].toLowerCase() + " spot");
+  positionEl(el, slot, resolveLayout());
+  el.innerHTML = '<span>' + TIER_LABEL[tier] + '</span>';
+  return el;
+}
+
+function renderSeedling(s){
+  if (!live(s)) return;
+  const slot = slotOf(s.id);
+  if (slot){
+    const old = document.querySelector('#board [data-slot="' + slot + '"]');
+    if (old){ const el = tileEl(s, slot); if (old.classList.contains("show-tools")) el.classList.add("show-tools"); old.replaceWith(el); }
+    return;
+  }
+  const old = document.querySelector('#seedlings [data-id="' + s.id + '"]');
+  if (!old){ renderNursery(); return; }
+  const focus = old.contains(document.activeElement) ? document.activeElement.dataset.f : null;
+  const el = seedlingCard(s);
+  old.replaceWith(el);
+  if (focus){ const f = el.querySelector('[data-f="' + focus + '"]'); if (f && !f.disabled) f.focus(); }
+  $("#repollNursery").disabled = !state.seedlings.some(x => !slotOf(x.id) && !x.loading && !(x.item && x.item.own));
+}
+
+function renderNursery(){
+  const wrap = $("#seedlings");
+  const list = state.seedlings.filter(s => !slotOf(s.id));
+  wrap.innerHTML = "";
+  list.forEach(s => wrap.appendChild(seedlingCard(s)));
+  const note = !state.seedlings.length
+    ? "Plant some seeds, or drop your own images here."
+    : (list.length ? "" : "Everything is on the board. Drag a tile back here to rework it.");
+  $("#nurseryEmpty").textContent = note;
+  $("#nurseryEmpty").style.display = note ? "block" : "none";
+  $("#repollNursery").disabled = !list.some(s => !s.loading && !(s.item && s.item.own));
+}
+
+function cardEl(){
+  const layout = resolveLayout();
+  const el = document.createElement("div");
+  el.className = "card"; el.id = "card";
+  if (layout !== "grid"){
+    const [x, y, w] = slotRect("card", layout);
+    el.style.left = x + "%"; el.style.top = y + "%"; el.style.width = w + "%";
+  }
+  const seeds = state.selected.map(seedById);
+  const words = seeds.flatMap(s => s.words.slice(0, seeds.length > 1 ? 2 : 3));
+  el.innerHTML =
+    (state.product ? '<p class="for">Mood for ' + esc(state.product) + '</p>' : '') +
+    (words.length ? '<p class="words">' + esc(words.join(", ")) + '</p>' : '') +
+    '<div class="swatches">' + state.swatches.map(h => '<div><span style="background:' + h + '"></span><code>' + h + '</code></div>').join("") + '</div>' +
+    (seeds.length ? '<p class="cross">' + esc(seeds.map(s => s.name).join(" × ")) + '</p>' : '');
+  return el;
+}
+function renderCard(){ const old = $("#card"); if (old) old.replaceWith(cardEl()); }
+
+function renderBoard(){
+  const board = $("#board");
+  if (!state.seedlings.length){
+    board.className = "board empty"; board.innerHTML = INVITE;
+    ["#mirrorBtn","#arrangeBtn","#clearBtn"].forEach(b => $(b).disabled = true);
+    return;
+  }
+  const layout = resolveLayout();
+  board.className = "board " + layout + (state.carrying ? " carrying" : "");
+  board.innerHTML = "";
+  SLOTS.forEach(slot => { const id = state.board[slot]; board.appendChild(id ? tileEl(byId(id), slot) : emptySlotEl(slot)); });
+  board.appendChild(cardEl());
+  $("#mirrorBtn").disabled = layout === "grid";
+  $("#arrangeBtn").disabled = !state.seedlings.some(s => !slotOf(s.id));
+  $("#clearBtn").disabled = !Object.keys(state.board).length;
+}
+
+function renderAll(){ renderNursery(); renderBoard(); updateNext(); }
+
+function updateNext(){
+  const el = $("#nextStep"); if (!el) return;
+  const product = $("#product").value.trim();
+  let msg;
+  if (state.seedlings.length) msg = "Next: rework seedlings in the nursery, then drag them onto the board or press Arrange all.";
+  else if (state.selected.length) msg = "Next: press Plant to grow seedlings in the nursery.";
+  else if (product) msg = "Next: press Enter or Suggest seeds to grow seeds for this, or pick up to three from the seed library.";
+  else msg = "Start by typing what you’re designing.";
+  el.textContent = msg;
+  $("#suggestBtn").classList.toggle("nudge", !!product && !state.selected.length && !state.seedlings.length);
+}
+
+function renderCredits(){
+  const list = $("#creditList");
+  const placed = SLOTS.map(k => state.board[k] && byId(state.board[k])).filter(s => s && s.item && !s.item.sketch);
+  list.innerHTML = placed.map(s => {
+    const it = s.item;
+    if (it.own) return '<li>Your image, “' + esc(it.title || "untitled") + '”.</li>';
+    const title = esc(it.title || "Untitled");
+    const who = it.creator ? (it.creatorUrl ? '<a href="' + esc(it.creatorUrl) + '" target="_blank" rel="noopener">' + esc(it.creator) + '</a>' : esc(it.creator)) : "unknown creator";
+    const lic = it.licenseUrl ? '<a href="' + esc(it.licenseUrl) + '" target="_blank" rel="noopener">' + esc(licenseLabel(it)) + '</a>' : esc(licenseLabel(it));
+    return '<li><a href="' + esc(it.landing || it.src) + '" target="_blank" rel="noopener">' + title + '</a> by ' + who + ', ' + lic + ' via ' + esc(it.source || "Openverse") + '. Words: “' + esc(it.term) + '”.</li>';
+  }).join("");
+  $("#creditEmpty").style.display = placed.length ? "none" : "block";
+  $("#copyCredits").disabled = !placed.length;
+}
+
+/* ---------- Shelf ---------- */
+function packetEl(s){
+  const b = document.createElement("button");
+  const idx = state.selected.indexOf(s.id);
+  const fit = state.fits.indexOf(s.id);
+  b.className = "packet" + (s.grown ? " grown" : "");
+  b.setAttribute("aria-pressed", idx > -1);
+  b.title = s.desc || "";
+  b.innerHTML = '<span class="bands">' + s.palette.map(c => '<i style="background:' + c + '"></i>').join("") + '</span>' +
+    (fit > -1 ? '<span class="fit">Fits</span>' : '') +
+    '<strong>' + esc(s.name) + '</strong><small>' + esc(s.words.join(", ")) + '<br>' + (s.soil === "bleed" ? "Full bleed soil" : "Block soil") + '</small>' +
+    '<span class="order">' + (idx + 1) + '</span>';
+  b.addEventListener("click", () => {
+    const i = state.selected.indexOf(s.id);
+    if (i > -1) state.selected.splice(i, 1);
+    else if (state.selected.length < 3) state.selected.push(s.id);
+    else { notice("Three seeds is the limit. Remove one to plant a different seed."); return; }
+    notice("");
+    renderShelf();
+    $("#plantBtn").disabled = !state.selected.length;
+  });
+  return b;
+}
+
+function renderShelf(){
+  const grown = $("#grownPackets"); grown.innerHTML = "";
+  state.grown.forEach(s => grown.appendChild(packetEl(s)));
+  $("#copySeeds").hidden = !state.grown.length;
+  const wrap = $("#packets"); wrap.innerHTML = "";
+  const lib = SEEDS.slice().sort((x, y) => (state.fits.includes(y.id) ? 1 : 0) - (state.fits.includes(x.id) ? 1 : 0));
+  lib.forEach(s => wrap.appendChild(packetEl(s)));
+  $("#seedNotes").innerHTML = state.selected.map(seedById).filter(Boolean).map(s => '<p><strong>' + esc(s.name) + '.</strong> ' + esc(s.desc || "") + '</p>').join("");
+  updateNext();
+}
+
+/* ---------- Seeds from the brief ---------- */
+/* Offline fallback: match the product against design categories and flag library seeds that fit */
+const CATEGORIES = [
+  {keys:["kettle","toaster","mug","cup","teapot","pot","pan","grinder","coffee","espresso","blender","knife","bowl","plate","kitchen","utensil","jar","bottle","carafe"], seeds:["ceramic","birch","concrete"]},
+  {keys:["speaker","radio","headphone","headphones","earbud","earbuds","amp","amplifier","turntable","synth","synthesizer","microphone","audio","stereo"], seeds:["instrument","nocturne","acid"]},
+  {keys:["lantern","flashlight","torch","tent","compass","canteen","bike","bicycle","watch","backpack","stove","camping","hiking","outdoor","binoculars"], seeds:["instrument","fog","desert"]},
+  {keys:["toy","game","kid","kids","child","children","baby","controller","puzzle","playground"], seeds:["acid","desert","ceramic"]},
+  {keys:["lamp","light","lighting","sconce","pendant","chandelier","candle"], seeds:["nocturne","birch","concrete"]},
+  {keys:["chair","stool","table","bench","shelf","shelving","desk","sofa","bed","furniture","cabinet"], seeds:["concrete","birch","ceramic"]},
+  {keys:["phone","camera","keyboard","mouse","laptop","drone","console","tablet","wearable","tracker","charger","router"], seeds:["instrument","nocturne","concrete"]},
+  {keys:["razor","toothbrush","brush","comb","perfume","soap","dispenser","skincare","bath","shower"], seeds:["fog","ceramic","birch"]},
+  {keys:["planter","garden","watering","vase","pot","plant"], seeds:["ceramic","desert","fog"]}
+];
+function localFits(product){
+  const words = product.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  const score = {};
+  CATEGORIES.forEach(c => { if (c.keys.some(k => words.includes(k) || words.includes(k + "s"))) c.seeds.forEach((id, i) => score[id] = (score[id] || 0) + 3 - i); });
+  return Object.keys(score).sort((a, b) => score[b] - score[a]).slice(0, 3);
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const shortTerm = t => String(t || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").trim().split(/\s+/).slice(0, 3).join(" ");
+function cleanSeed(raw, i){
+  if (!raw || typeof raw !== "object") return null;
+  const words = (Array.isArray(raw.words) ? raw.words : []).map(w => String(w).trim().toLowerCase()).filter(Boolean).slice(0, 3);
+  const palette = (Array.isArray(raw.palette) ? raw.palette : []).map(String).filter(c => HEX.test(c)).map(c => c.toUpperCase()).slice(0, 5);
+  const terms = {};
+  for (const tier of ["bg","hero","mid","small"]){
+    const list = [...new Set((raw.terms && Array.isArray(raw.terms[tier]) ? raw.terms[tier] : []).map(shortTerm).filter(Boolean))];
+    if (list.length < 2) return null;
+    terms[tier] = list.slice(0, 8);
+  }
+  if (!raw.name || palette.length < 3 || !words.length) return null;
+  while (palette.length < 5) palette.push(palette[palette.length - 1]);
+  return {id:"g" + i + "-" + uid(), grown:true, name:String(raw.name).slice(0, 28), soil:raw.soil === "bleed" ? "bleed" : "block",
+    palette, words, desc:String(raw.desc || "").replace(/\u2014/g, ",").slice(0, 260), terms};
+}
+
+function suggestPrompt(product){
+  return [
+    "You help industrial design students start mood boards. A student is designing: " + JSON.stringify(product) + ".",
+    "Propose 4 distinct aesthetic directions for it, called seeds. Make them genuinely different: one that a client would expect for this product, one that contrasts with it, one rooted in a material tradition or design history relevant to it, and one surprising wildcard that still makes sense for its use.",
+    "Each seed's images come from a keyword search of Creative Commons photos (Openverse), which matches words against photo titles and tags. So every search term must be 1 to 3 common words naming a concrete, photographable subject, material, texture, or place, the kind of words photographers tag with. No adjectives alone, no abstract ideas, no brand names, and never the product itself or its obvious parts, because the board shows the world around the product, not the product.",
+    "Return ONLY a JSON object, no other text, in exactly this shape:",
+    '{"seeds":[{"name":"two or three word seed name","desc":"one or two sentences on the mood, materials, and light, without em dashes","words":["three","mood","words"],"palette":["#RRGGBB","#RRGGBB","#RRGGBB","#RRGGBB","#RRGGBB"],"soil":"block or bleed","terms":{"bg":[4 wide scenes or landscapes],"hero":[4 strong single subjects],"mid":[6 materials, objects, or details],"small":[6 close up textures]}}]}',
+    "Palettes should run from a light tone to a dark tone with one accent. Use soil \"bleed\" only for moody, atmospheric seeds where a full background image suits; otherwise \"block\"."
+  ].join("\n\n");
+}
+
+/* ---------- Carrying seeds between copies ---------- */
+function seedExport(){
+  return JSON.stringify({moodGardenSeeds:1, product:$("#product").value.trim(), seeds:state.grown.map(({id, grown, ...rest}) => rest)});
+}
+async function copySeeds(){
+  const text = seedExport(), status = $("#suggestStatus");
+  try{
+    await navigator.clipboard.writeText(text);
+    $("#copySeeds").textContent = "Copied"; setTimeout(() => $("#copySeeds").textContent = "Copy seeds", 1600);
+    status.textContent = "Seeds copied. In your downloaded copy, open Paste seeds and paste them in.";
+  } catch(e){
+    $("#pasteBox").open = true;
+    const ta = $("#seedText"); ta.value = text; ta.focus(); ta.select();
+    status.textContent = "Copying was blocked here, so the seeds are selected in the box below. Copy them by hand with Ctrl+C or Cmd+C.";
+  }
+}
+function addPastedSeeds(){
+  const raw = $("#seedText").value.trim(), status = $("#suggestStatus");
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch(e){ status.textContent = "That doesn’t look like copied seeds. Copy them again with Copy seeds."; return; }
+  const list = Array.isArray(data) ? data : (data && Array.isArray(data.seeds) ? data.seeds : []);
+  const seeds = list.map(cleanSeed).filter(Boolean);
+  if (!seeds.length){ status.textContent = "No usable seeds were in that text. Copy them again with Copy seeds."; return; }
+  const names = new Set(state.grown.map(s => s.name.toLowerCase()));
+  const fresh = seeds.filter(s => !names.has(s.name.toLowerCase()));
+  state.grown = [...state.grown, ...fresh].slice(-12);
+  if (data && data.product && !$("#product").value.trim()){ $("#product").value = data.product; state.product = data.product; updateSuggest(); }
+  $("#seedText").value = ""; $("#pasteBox").open = false;
+  status.textContent = fresh.length ? fresh.length + (fresh.length === 1 ? " seed" : " seeds") + " added. Pick them and press Plant." : "Those seeds are already on the shelf.";
+  renderShelf();
+}
+
+let sampleFn = null;
+/* Outside claude.ai the page can reach the image search, so plant real images by default */
+if (!window.claude) $("#sketchMode").checked = false;
+(async () => {
+  try { sampleFn = window.claude ? await window.claude.use("sample") : null; } catch(e){ sampleFn = null; }
+  updateSuggest();
+})();
+
+function updateSuggest(){
+  const product = $("#product").value.trim();
+  const btn = $("#suggestBtn");
+  btn.disabled = !product || btn.dataset.busy === "1";
+  if (btn.dataset.busy !== "1") btn.textContent = product ? "Suggest seeds for “" + (product.length > 22 ? product.slice(0, 21) + "…" : product) + "”" : "Suggest seeds";
+  updateNext();
+}
+
+function applyLocal(product, why){
+  state.fits = localFits(product);
+  $("#suggestStatus").textContent = state.fits.length
+    ? why + " Library seeds that suit " + product + " are marked Fits and moved to the top."
+    : why + " None of the library seeds clearly match " + product + ", so pick the ones that feel right.";
+  renderShelf();
+}
+
+async function suggestSeeds(){
+  const product = $("#product").value.trim();
+  if (!product) return;
+  const btn = $("#suggestBtn"), status = $("#suggestStatus");
+  if (!sampleFn){ applyLocal(product, "Growing new seeds needs the hosted page."); return; }
+  btn.dataset.busy = "1"; btn.disabled = true; btn.textContent = "Growing seeds…";
+  status.textContent = "Thinking about " + product + ". This can take up to a minute.";
+  try{
+    const out = await sampleFn.json(suggestPrompt(product), {modelTier:"default"});
+    const seeds = (out && Array.isArray(out.seeds) ? out.seeds : []).map(cleanSeed).filter(Boolean).slice(0, 4);
+    if (!seeds.length) throw {code:"empty"};
+    const oldIds = new Set(state.grown.map(s => s.id));
+    state.selected = state.selected.filter(id => !oldIds.has(id));
+    state.grown = seeds;
+    state.fits = localFits(product);
+    status.textContent = seeds.length + (seeds.length === 1 ? " seed" : " seeds") + " grown for " + product + ". Hover a packet to read its description.";
+    $("#plantBtn").disabled = !state.selected.length;
+    renderShelf();
+  } catch(e){
+    const why = e && e.code === "not_granted" ? "Claude wasn’t allowed to run, so no new seeds were grown."
+      : e && e.code === "rate_limited" ? "Too many requests right now. Try again in a minute."
+      : "The seeds didn’t come out right that time.";
+    applyLocal(product, why);
+  } finally {
+    btn.dataset.busy = "0"; updateSuggest();
+  }
+}
+
+/* ---------- Drag helpers ---------- */
+const acceptable = e => { const t = [...(e.dataTransfer?.types || [])]; return t.includes("Files") || t.includes("text/plain"); };
+const imageFiles = e => [...(e.dataTransfer?.files || [])].filter(f => f.type.startsWith("image/"));
+function clearOver(){ document.querySelectorAll(".over").forEach(n => n.classList.remove("over")); }
+function markOver(el){ if (el.classList.contains("over")) return; clearOver(); el.classList.add("over"); }
+function startDrag(e, id){ e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; document.body.classList.add("dragging"); }
+function endDrag(){ document.body.classList.remove("dragging"); clearOver(); }
+
+/* ---------- Wiring: nursery ---------- */
+const nursery = $("#nursery"), seedWrap = $("#seedlings"), board = $("#board");
+const cardSeed = el => byId(el.closest(".seedling")?.dataset.id);
+
+seedWrap.addEventListener("click", e => {
+  const act = e.target.closest("button")?.dataset.act; if (!act) return;
+  const s = cardSeed(e.target); if (!s) return;
+  if (act === "repoll") repollinate(s);
+  else if (act === "own") e.target.closest(".seedling").querySelector('input[type=file]').click();
+  else if (act === "place") toggleCarry(s.id);
+});
+seedWrap.addEventListener("input", e => {
+  if (e.target.dataset.f !== "term") return;
+  const s = cardSeed(e.target); if (!s) return;
+  s.term = e.target.value; s.termEdited = !!s.term.trim();
+});
+seedWrap.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset.f === "term"){ e.preventDefault(); repollinate(cardSeed(e.target)); } });
+seedWrap.addEventListener("change", e => { if (e.target.type === "file" && e.target.files[0]) useOwnFile(cardSeed(e.target), e.target.files[0]); });
+seedWrap.addEventListener("dragstart", e => { const th = e.target.closest(".thumb"); if (th) startDrag(e, th.closest(".seedling").dataset.id); });
+nursery.addEventListener("dragover", e => { if (!acceptable(e)) return; e.preventDefault(); markOver(e.target.closest(".thumb") || nursery); });
+nursery.addEventListener("drop", e => {
+  e.preventDefault(); e.stopPropagation(); endDrag();
+  const files = imageFiles(e), th = e.target.closest(".thumb");
+  if (files.length){ if (th) useOwnFile(cardSeed(th), files[0]); else addOwnFiles(files); return; }
+  if (e.dataTransfer.files.length){ notice("Those files aren’t images. Try a JPG, PNG, WebP, or GIF."); return; }
+  const id = e.dataTransfer.getData("text/plain");
+  if (id && slotOf(id)) unplace(id);
+});
+$("#addOwnBtn").addEventListener("click", () => $("#addOwnInput").click());
+$("#addOwnInput").addEventListener("change", e => { addOwnFiles([...e.target.files]); e.target.value = ""; });
+$("#repollNursery").addEventListener("click", repollinateNursery);
+
+/* ---------- Wiring: board ---------- */
+board.addEventListener("click", e => {
+  const tile = e.target.closest(".tile"); if (!tile) return;
+  const slot = tile.dataset.slot, s = state.board[slot] ? byId(state.board[slot]) : null;
+  const act = e.target.closest("button")?.dataset.act;
+  if (act === "repoll" && s){ e.stopPropagation(); repollinate(s); return; }
+  if (act === "return" && s){ e.stopPropagation(); unplace(s.id); return; }
+  if (state.carrying){ place(state.carrying, slot); return; }
+  if (s){ document.querySelectorAll(".tile.show-tools").forEach(n => n !== tile && n.classList.remove("show-tools")); tile.classList.toggle("show-tools"); }
+});
+board.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && state.carrying && e.target.classList.contains("tile")){ e.preventDefault(); place(state.carrying, e.target.dataset.slot); }
+});
+board.addEventListener("dragstart", e => { const tile = e.target.closest(".tile"); const id = tile && state.board[tile.dataset.slot]; if (id) startDrag(e, id); });
+board.addEventListener("dragover", e => {
+  const tile = e.target.closest(".tile");
+  if (!tile || !acceptable(e)){ clearOver(); return; }
+  e.preventDefault(); markOver(tile);
+});
+board.addEventListener("drop", e => {
+  const tile = e.target.closest(".tile"); if (!tile) return;
+  e.preventDefault(); e.stopPropagation(); endDrag();
+  const slot = tile.dataset.slot, files = imageFiles(e);
+  if (files.length){
+    const id = state.board[slot];
+    if (id){ useOwnFile(byId(id), files[0]); return; }
+    const s = newSeedling(tierOf(slot)); state.seedlings.push(s); state.board[slot] = s.id;
+    renderAll(); useOwnFile(s, files[0]); return;
+  }
+  const id = e.dataTransfer.getData("text/plain");
+  if (id && byId(id)) place(id, slot);
+});
+
+/* ---------- Wiring: everything else ---------- */
+document.addEventListener("dragend", endDrag);
+document.addEventListener("dragover", e => { if (acceptable(e)) e.preventDefault(); });
+document.addEventListener("drop", e => { e.preventDefault(); endDrag(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && state.carrying) toggleCarry(state.carrying); });
+document.addEventListener("click", e => { if (!e.target.closest(".tile")) document.querySelectorAll(".tile.show-tools").forEach(n => n.classList.remove("show-tools")); });
+
+$("#plantBtn").addEventListener("click", plant);
+$("#product").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (state.selected.length) plant();
+  else if (e.target.value.trim()) suggestSeeds();
+});
+$("#product").addEventListener("input", e => { state.product = e.target.value.trim(); renderCard(); updateSuggest(); });
+$("#suggestBtn").addEventListener("click", suggestSeeds);
+$("#copySeeds").addEventListener("click", copySeeds);
+$("#addSeeds").addEventListener("click", addPastedSeeds);
+$("#layoutSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.layout = b.dataset.layout;
+  document.querySelectorAll("#layoutSeg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderBoard();
+});
+$("#mirrorBtn").addEventListener("click", () => { state.flip = !state.flip; renderBoard(); });
+$("#arrangeBtn").addEventListener("click", arrangeAll);
+$("#clearBtn").addEventListener("click", clearBoard);
+$("#copyCredits").addEventListener("click", async () => {
+  const lines = SLOTS.map(k => state.board[k] && byId(state.board[k])).filter(s => s && s.item && !s.item.sketch).map(s => {
+    const it = s.item;
+    return it.own ? "Your image: " + (it.title || "untitled") : (it.title || "Untitled") + " by " + (it.creator || "unknown creator") + ", " + licenseLabel(it) + ", " + (it.landing || it.src);
+  });
+  try{ await navigator.clipboard.writeText(lines.join("\n")); $("#copyCredits").textContent = "Copied"; setTimeout(() => $("#copyCredits").textContent = "Copy credits", 1600); }
+  catch(e){ notice("Copying was blocked by the browser. Select the list below and copy it by hand."); }
+});
+
+renderShelf();
+renderAll();
+</script>
+</body>
+</html>
