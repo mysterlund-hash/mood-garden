@@ -178,6 +178,40 @@ main{display:grid; grid-template-columns:270px minmax(0,1fr); gap:0}
 .board.carrying .tile{cursor:copy}
 .tile[draggable=true]{cursor:grab}
 @media (prefers-reduced-motion: reduce){ .sprout::after{animation:none} .tile .tools{transition:none} }
+
+/* Mix a feeling: emotions as ingredients */
+.mix-box{margin:0 0 22px; padding:0 0 18px; border-bottom:1px solid var(--rule)}
+.model-seg{display:flex; width:100%; margin:2px 0 4px}
+.model-seg button{flex:1}
+.model-note{margin:0 0 10px; font-size:13px; color:var(--muted)}
+.emotions{display:flex; flex-wrap:wrap; gap:6px}
+.emo{display:inline-flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--rule); border-radius:999px; padding:5px 11px 5px 7px; font-size:14px; cursor:pointer; color:var(--ink)}
+.emo i, .recipe i{width:12px; height:12px; border-radius:50%; background:var(--c); flex:none}
+.emo[aria-pressed="true"]{border-color:var(--ink); background:var(--board); box-shadow:inset 0 0 0 1px var(--ink)}
+.recipe{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:7px}
+.recipe:empty{display:none}
+.recipe li{display:grid; grid-template-columns:12px 1fr auto; gap:8px; align-items:center; font-size:14px}
+.recipe .seg button{padding:4px 7px; font-size:12.5px}
+.energy{display:flex; flex-direction:column; gap:3px; margin:14px 0 0; font-size:14px; color:var(--muted)}
+.energy b{color:var(--ink); font-weight:600}
+.energy input{width:100%; accent-color:var(--leaf); margin:2px 0}
+.energy .ends{display:flex; justify-content:space-between; font-size:12.5px}
+.hybrid{margin:14px 0 10px; background:var(--panel); border:1px solid var(--rule); border-radius:3px 3px 10px 10px; overflow:hidden}
+.hybrid .bands{display:flex; height:34px}
+.hybrid .bands i{flex:1}
+.hybrid input{display:block; width:100%; background:transparent; border:0; border-bottom:1px dashed var(--rule); padding:8px 10px 2px; font-family:var(--serif); font-size:26px; line-height:1.1; color:var(--ink)}
+.hybrid input:focus-visible{outline-offset:-2px}
+.hybrid p{margin:0; padding:6px 10px 10px; font-size:13px; color:var(--muted); line-height:1.35}
+.hybrid.blank .bands i{background:var(--rule)!important}
+.translate summary{cursor:pointer; font-size:14px; color:var(--muted); margin:0 0 4px}
+.translate .tnote{margin:6px 0 10px; font-size:13px; color:var(--muted)}
+.translate h3{font-size:14px; font-weight:600; margin:12px 0 4px; display:flex; gap:6px; align-items:center}
+.translate label{display:block; font-size:12.5px; color:var(--muted); margin:0 0 6px}
+.translate textarea{display:block; width:100%; margin-top:2px; background:var(--panel); border:1px solid var(--rule); border-radius:4px; padding:5px 7px; font-size:13px; line-height:1.35; color:var(--ink); resize:vertical; font-family:var(--sans)}
+.mix-status{margin:8px 0 10px; font-size:13.5px; color:var(--muted)}
+.mix-status:empty{display:none}
+.tool.make{width:100%; background:var(--leaf); color:var(--leaf-ink); border-color:var(--leaf); font-weight:600}
+.translate h3 i{width:12px; height:12px; border-radius:50%; background:var(--c); flex:none}
 </style>
 </head><body>
 <header>
@@ -207,6 +241,36 @@ main{display:grid; grid-template-columns:270px minmax(0,1fr); gap:0}
           <button class="tool" id="addSeeds">Add seeds</button>
         </details>
       </div>
+    </div>
+    <div class="mix-box">
+      <h2>Mix a feeling</h2>
+      <p class="hint">Combine basic emotions like ingredients. Each one grows pictures of light, places, and materials rather than faces.</p>
+      <div class="seg model-seg" role="group" aria-label="Emotion model" id="modelSeg">
+        <button data-model="four" aria-pressed="false">Four</button>
+        <button data-model="six" aria-pressed="false">Six</button>
+        <button data-model="eight" aria-pressed="true">Eight</button>
+      </div>
+      <p class="model-note" id="modelNote"></p>
+      <div class="emotions" id="emotions" role="group" aria-label="Emotions"></div>
+      <ol class="recipe" id="recipe" aria-label="Your recipe"></ol>
+      <label class="energy">
+        <span>Energy: <b id="energyWord">Even</b></span>
+        <input type="range" id="energy" min="0" max="4" step="1" value="2">
+        <span class="ends"><span>Quiet, slowing</span><span>Activating</span></span>
+      </label>
+      <div class="hybrid blank" id="hybrid">
+        <span class="bands" id="hybridBands"></span>
+        <input type="text" id="hybridName" aria-label="Name this feeling" placeholder="Pick up to three">
+        <p id="hybridWords">Rename it if it reads differently to you or your user.</p>
+      </div>
+      <details class="translate" id="translate">
+        <summary>How this feeling becomes pictures</summary>
+        <p class="tnote">Each list runs from quiet to activating, and the energy setting picks from that end. Edit the words to change what grows.</p>
+        <div id="translateBody"></div>
+      </details>
+      <p class="mix-status" id="mixStatus" role="status"></p>
+      <button class="tool make" id="makeBtn" disabled>Make this seed</button>
+      <div class="packets" id="mixedPackets" style="margin-top:10px"></div>
     </div>
     <h2>Seed library</h2>
     <p class="hint">Pick up to three seeds from either group. The first seed sets the soil and the background.</p>
@@ -292,7 +356,7 @@ const SEEDS = [
    desc:"Desert after rain: sunbaked sand and adobe, sparse agave and cactus, and sudden bright blooms against dusty earth.",
    terms:{bg:["desert dunes","sandstone canyon","desert sunset","red rock"], hero:["cactus flower","agave","saguaro","desert bloom"], mid:["adobe wall","dried flowers","desert road","succulents","joshua tree","desert pottery"], small:["sand ripples","cracked earth","cactus spines","sandstone texture","dried grass","terracotta texture"]}}
 ];
-const seedById = id => SEEDS.find(s => s.id === id) || state.grown.find(s => s.id === id);
+const seedById = id => SEEDS.find(s => s.id === id) || state.grown.find(s => s.id === id) || (state.mixed || []).find(s => s.id === id);
 
 /* ---------- Layout templates (percent of board) ---------- */
 const SLOTS = ["bg","hero","mid1","mid2","mid3","s1","s2","s3","s4","s5"];
@@ -652,6 +716,9 @@ const INVITE = '<p class="invite"><em>Nothing planted yet.</em>Choose seeds, nam
 function slotRect(slot, layout){
   const r = TEMPLATES[layout][slot].slice();
   if (state.flip) r[0] = 100 - r[0] - r[2], r[4] = r[4] !== undefined ? -r[4] : r[4];
+  /* a feeling seed sets how much the tiles tilt: still boards sit square, charged ones scatter */
+  const tilt = seedById(state.selected[0])?.tilt;
+  if (r[4] !== undefined && typeof tilt === "number") r[4] *= tilt;
   return r;
 }
 function positionEl(el, slot, layout){
@@ -697,7 +764,8 @@ function seedlingCard(s){
   el.appendChild(thumb);
   const body = document.createElement("div");
   body.className = "body";
-  const from = s.item && s.item.own ? "Your image" + (s.item.title ? ", " + s.item.title : "") : (seed ? seed.name + " seed" : "");
+  const origin = seed && seed.origins && seed.origins[s.term];
+  const from = s.item && s.item.own ? "Your image" + (s.item.title ? ", " + s.item.title : "") : (seed ? seed.name + " seed" + (origin ? ", from " + emoLabel(origin).toLowerCase() : "") : "");
   body.innerHTML =
     '<p class="from">' + esc(from) + '</p>' +
     '<input type="text" data-f="term" aria-label="Words to grow this image from" placeholder="type words, then re-pollinate" value="' + esc(s.term) + '">' +
@@ -786,7 +854,7 @@ function cardEl(){
     (state.product ? '<p class="for">Mood for ' + esc(state.product) + '</p>' : '') +
     (words.length ? '<p class="words">' + esc(words.join(", ")) + '</p>' : '') +
     '<div class="swatches">' + state.swatches.map(h => '<div><span style="background:' + h + '"></span><code>' + h + '</code></div>').join("") + '</div>' +
-    (seeds.length ? '<p class="cross">' + esc(seeds.map(s => s.name).join(" × ")) + '</p>' : '');
+    (seeds.length ? '<p class="cross">' + esc(seeds.map(s => s.recipe ? s.name + " (" + s.recipe.join(" + ") + ")" : s.name).join(" × ")) + '</p>' : '');
   return el;
 }
 function renderCard(){ const old = $("#card"); if (old) old.replaceWith(cardEl()); }
@@ -831,7 +899,7 @@ function renderCredits(){
     const title = esc(it.title || "Untitled");
     const who = it.creator ? (it.creatorUrl ? '<a href="' + esc(it.creatorUrl) + '" target="_blank" rel="noopener">' + esc(it.creator) + '</a>' : esc(it.creator)) : "unknown creator";
     const lic = it.licenseUrl ? '<a href="' + esc(it.licenseUrl) + '" target="_blank" rel="noopener">' + esc(licenseLabel(it)) + '</a>' : esc(licenseLabel(it));
-    return '<li><a href="' + esc(it.landing || it.src) + '" target="_blank" rel="noopener">' + title + '</a> by ' + who + ', ' + lic + ' via ' + esc(it.source || "Openverse") + '. Words: “' + esc(it.term) + '”.</li>';
+    return '<li><a href="' + esc(it.landing || it.src) + '" target="_blank" rel="noopener">' + title + '</a> by ' + who + ', ' + lic + ' via ' + esc(it.source || "Openverse") + '. Words: “' + esc(it.term) + '”' + (seedById(s.seedId)?.origins?.[it.term] ? ', grown from ' + esc(emoLabel(seedById(s.seedId).origins[it.term]).toLowerCase()) : '') + '.</li>';
   }).join("");
   $("#creditEmpty").style.display = placed.length ? "none" : "block";
   $("#copyCredits").disabled = !placed.length;
@@ -842,7 +910,7 @@ function packetEl(s){
   const b = document.createElement("button");
   const idx = state.selected.indexOf(s.id);
   const fit = state.fits.indexOf(s.id);
-  b.className = "packet" + (s.grown ? " grown" : "");
+  b.className = "packet" + (s.grown || s.mixed ? " grown" : "");
   b.setAttribute("aria-pressed", idx > -1);
   b.title = s.desc || "";
   b.innerHTML = '<span class="bands">' + s.palette.map(c => '<i style="background:' + c + '"></i>').join("") + '</span>' +
@@ -862,9 +930,11 @@ function packetEl(s){
 }
 
 function renderShelf(){
+  const mixedWrap = $("#mixedPackets"); mixedWrap.innerHTML = "";
+  state.mixed.slice().reverse().forEach(s => mixedWrap.appendChild(packetEl(s)));
   const grown = $("#grownPackets"); grown.innerHTML = "";
   state.grown.forEach(s => grown.appendChild(packetEl(s)));
-  $("#copySeeds").hidden = !state.grown.length;
+  $("#copySeeds").hidden = !state.grown.length && !state.mixed.length;
   const wrap = $("#packets"); wrap.innerHTML = "";
   const lib = SEEDS.slice().sort((x, y) => (state.fits.includes(y.id) ? 1 : 0) - (state.fits.includes(x.id) ? 1 : 0));
   lib.forEach(s => wrap.appendChild(packetEl(s)));
@@ -906,8 +976,12 @@ function cleanSeed(raw, i){
   }
   if (!raw.name || palette.length < 3 || !words.length) return null;
   while (palette.length < 5) palette.push(palette[palette.length - 1]);
+  const extra = {};
+  if (typeof raw.tilt === "number" && raw.tilt >= 0 && raw.tilt <= 3) extra.tilt = raw.tilt;
+  if (raw.origins && typeof raw.origins === "object") extra.origins = Object.fromEntries(Object.entries(raw.origins).filter(([k, v]) => EMO[v]));
+  if (Array.isArray(raw.recipe)) extra.recipe = raw.recipe.map(String).slice(0, 3);
   return {id:"g" + i + "-" + uid(), grown:true, name:String(raw.name).slice(0, 28), soil:raw.soil === "bleed" ? "bleed" : "block",
-    palette, words, desc:String(raw.desc || "").replace(/\u2014/g, ",").slice(0, 260), terms};
+    palette, words, desc:String(raw.desc || "").replace(/\u2014/g, ",").slice(0, 260), terms, ...extra};
 }
 
 function suggestPrompt(product){
@@ -923,7 +997,7 @@ function suggestPrompt(product){
 
 /* ---------- Carrying seeds between copies ---------- */
 function seedExport(){
-  return JSON.stringify({moodGardenSeeds:1, product:$("#product").value.trim(), seeds:state.grown.map(({id, grown, ...rest}) => rest)});
+  return JSON.stringify({moodGardenSeeds:1, product:$("#product").value.trim(), seeds:[...state.grown, ...state.mixed].map(({id, grown, mixed, ...rest}) => rest)});
 }
 async function copySeeds(){
   const text = seedExport(), status = $("#suggestStatus");
@@ -1005,6 +1079,206 @@ async function suggestSeeds(){
     btn.dataset.busy = "0"; updateSuggest();
   }
 }
+
+/* ---------- Mix a feeling ---------- */
+/* Each emotion lists pictures in four sizes, ordered from quiet to activating. Palette is light, mid, deep, accent. */
+const EMO = {
+  joy:{name:"Joy", color:"#F2C230", solo:"Joyful", palette:["#FFF1C2","#F7C948","#B7791F","#F28C28"], quiet:["content","sunny"], lively:["exuberant","bright"],
+    terms:{bg:["morning light window","sunlit meadow","wildflower field","sunny beach","summer festival","fireworks"], hero:["sunflower","lemon tree","kite","hot air balloon","carnival ride","confetti"], mid:["linen curtains","citrus fruit","picnic blanket","flower market","beach umbrella","colorful balloons"], small:["dandelion seeds","lemon slice","yellow petals","pollen","sprinkles","confetti closeup"]}},
+  trust:{name:"Trust", color:"#7DB24A", solo:"Steady", palette:["#E6F2DC","#9CC58A","#3F6B45","#D9B26F"], quiet:["steady","safe"], lively:["welcoming","open"],
+    terms:{bg:["quiet library","forest path","cabin interior","farmhouse kitchen","harbor village","market square"], hero:["old oak tree","stone bridge","fireplace","lighthouse","harbor boats","long table"], mid:["wool blanket","oak table","bread loaf","leather satchel","rope knot","workbench tools"], small:["moss","wood grain","knit wool","linen texture","stitching","river stones"]}},
+  fear:{name:"Fear", color:"#2E7D4F", solo:"Uneasy", palette:["#D5DDD8","#5E7A70","#1E2E2A","#8FA3A0"], quiet:["uneasy","hushed"], lively:["tense","alarming"],
+    terms:{bg:["foggy forest","dark corridor","abandoned house","storm clouds","dark ocean waves","lightning storm"], hero:["bare tree fog","raven","empty swing","cliff edge","long shadow","lightning"], mid:["rusted gate","cracked window","old doll","barbed wire","flashlight dark","broken glass"], small:["lichen","peeling paint","thorns","black smoke","rust texture","shattered glass"]}},
+  surprise:{name:"Surprise", color:"#2BB3E0", solo:"Wondrous", palette:["#E2F6F7","#7FD3D9","#1F6F78","#F5E663"], quiet:["curious","wondering"], lively:["astonishing","sparkling"],
+    terms:{bg:["aurora sky","ice cave","bioluminescent bay","cherry blossom tunnel","rainbow sky","kaleidoscope"], hero:["jellyfish","soap bubble","prism light","opening flower","pop up book","jack in the box"], mid:["origami","geode","glass marbles","paper lantern","holographic foil","party popper"], small:["frost pattern","iridescent shell","opal","oil slick","glitter","fractal"]}},
+  sadness:{name:"Sadness", color:"#4A63B8", solo:"Melancholy", palette:["#DCE4EE","#7C93B0","#2B3A55","#B8A9C9"], quiet:["wistful","soft"], lively:["stormy","aching"],
+    terms:{bg:["misty lake","rainy window","grey sky","empty beach winter","rain street","stormy sea"], hero:["wilted flower","empty chair","lone tree","old photograph","umbrella rain","rain puddle"], mid:["faded letters","dried roses","teacup","worn denim","wet leaves","rain gutter"], small:["dust","faded paper","condensation","raindrops glass","blue ink","water droplets"]}},
+  disgust:{name:"Disgust", color:"#8E4FA8", solo:"Visceral", palette:["#E9E2EE","#8E7AA0","#3D2E4A","#A3A847"], quiet:["odd","organic"], lively:["visceral","oozing"],
+    terms:{bg:["swamp","fungus forest","rotting log","polluted river","landfill","slime mold"], hero:["mushroom","toad","moldy fruit","octopus","slug","insect macro"], mid:["compost","seaweed","fungus","rusted pipe","grease","oil spill"], small:["lichen macro","algae","mold texture","rot","slime","bark beetle"]}},
+  anger:{name:"Anger", color:"#D83A2E", solo:"Fiery", palette:["#F5D9D0","#D9583B","#6B1E1A","#2B2B2B"], quiet:["smoldering","dense"], lively:["fiery","forceful"],
+    terms:{bg:["red desert storm","forge fire","volcano","wildfire","lava flow","erupting volcano"], hero:["embers","blacksmith hammer","bull","red chili pepper","thunderstorm","fire"], mid:["cast iron","red brick","forged steel","welding sparks","smashed glass","barbed wire"], small:["charcoal","rust","scorched wood","cracked paint red","ember","sparks"]}},
+  anticipation:{name:"Anticipation", color:"#F28A1A", solo:"Expectant", palette:["#FCE6CF","#F0A04B","#8A4B14","#3E6E8E"], quiet:["expectant","poised"], lively:["eager","racing"],
+    terms:{bg:["sunrise road","train station platform","runway lights","starting line","stadium lights","race track"], hero:["seedling","envelope","compass","open door light","hourglass","race car"], mid:["map","packed suitcase","calendar","ticket","bicycle wheel","stopwatch"], small:["buds","sprouting seeds","clock gears","matches","fuse","starting blocks"]}},
+  love:{name:"Love", color:"#E2769A", solo:"Tender", palette:["#F9E0E3","#E58FA0","#7A2E40","#F2C14E"], quiet:["tender","close"], lively:["passionate","warm"],
+    terms:{bg:["candlelit room","rose garden","golden hour field","sunset over water","string lights","festival lanterns"], hero:["roses","handwritten letter","two teacups","red tulips","heart shape","holding hands"], mid:["silk ribbon","velvet","peony","honey","lace","chocolate"], small:["rose petals","velvet texture","lace closeup","candle flame","pink petals","silk"]}}
+};
+const MODELS = {
+  four:{note:"Mad, glad, sad, afrad, from the improv warmup.", list:[["joy","Glad"],["sadness","Sad"],["anger","Mad"],["fear","Afrad"]]},
+  six:{note:"The six core emotions of the Junto mood wheel.", list:[["love","Love"],["joy","Joy"],["surprise","Surprise"],["anger","Anger"],["sadness","Sadness"],["fear","Fear"]]},
+  eight:{note:"Robert Plutchik’s eight foundational emotions.", list:[["joy","Joy"],["trust","Trust"],["fear","Fear"],["surprise","Surprise"],["sadness","Sadness"],["disgust","Disgust"],["anger","Anger"],["anticipation","Anticipation"]]}
+};
+/* Starting names only, not formulas. Students rename them. */
+const HYBRIDS = {
+  "joy+trust":"Cozy", "joy+surprise":"Whimsical", "joy+sadness":"Bittersweet", "anticipation+joy":"Optimistic", "anger+joy":"Proud", "fear+joy":"Giddy", "disgust+joy":"Gleefully gross", "joy+love":"Wholesome",
+  "fear+trust":"Sheltered", "surprise+trust":"Curious", "sadness+trust":"Sentimental", "disgust+trust":"Earthy", "anger+trust":"Commanding", "anticipation+trust":"Hopeful", "love+trust":"Devoted",
+  "fear+surprise":"Awestruck", "fear+sadness":"Desolate", "disgust+fear":"Eerie", "anger+fear":"Volatile", "anticipation+fear":"Suspenseful", "fear+love":"Protective",
+  "sadness+surprise":"Bewildered", "disgust+surprise":"Uncanny", "anger+surprise":"Shocking", "anticipation+surprise":"Electric", "love+surprise":"Smitten",
+  "disgust+sadness":"Decaying", "anger+sadness":"Brooding", "anticipation+sadness":"Pensive", "love+sadness":"Longing",
+  "anger+disgust":"Gritty", "anticipation+disgust":"Cynical", "disgust+love":"Tender grotesque", "anger+anticipation":"Driven", "anger+love":"Fierce", "anticipation+love":"Yearning",
+  "anticipation+joy+surprise":"Hype", "joy+sadness+surprise":"Dreamy", "fear+joy+surprise":"Unhinged", "anticipation+fear+joy":"Adventurous", "joy+love+trust":"Heartwarming"
+};
+const ENERGY = ["Still","Gentle","Even","Lively","Charged"];
+const PARTS = [[1,"Little","a little"],[2,"Some","some"],[3,"Lots","lots of"]];
+const TIERS = [["bg","Scenes"],["hero","Subjects"],["mid","Materials and objects"],["small","Textures"]];
+
+state.mix = {model:"eight", ing:[], energy:2, name:"", nameEdited:false};
+state.mixed = [];
+state.emoTerms = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(EMO).map(([k, v]) => [k, v.terms]))));
+
+const emoLabel = id => (MODELS[state.mix.model].list.find(([k]) => k === id) || [id, EMO[id].name])[1];
+const byParts = () => state.mix.ing.slice().sort((a, b) => b.parts - a.parts);
+
+function hybridName(){
+  const ing = byParts();
+  if (!ing.length) return "";
+  if (ing.length === 1) return EMO[ing[0].id].solo;
+  const key = ids => ids.slice().sort().join("+");
+  if (ing.length === 3 && HYBRIDS[key(ing.map(i => i.id))]) return HYBRIDS[key(ing.map(i => i.id))];
+  const pair = HYBRIDS[key([ing[0].id, ing[1].id])] || emoLabel(ing[0].id) + " and " + emoLabel(ing[1].id).toLowerCase();
+  return ing.length === 3 ? pair + ", with a little " + emoLabel(ing[2].id).toLowerCase() : pair;
+}
+
+function toHsl(hex){
+  let [r, g, b] = hexToRgb(hex).map(v => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn){
+    const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6;
+  }
+  return [h, s, l];
+}
+function fromHsl([h, s, l]){
+  const f = n => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return rgbToHex([f(0) * 255, f(8) * 255, f(4) * 255]);
+}
+function energize(hex, e){
+  const [h, s, l] = toHsl(hex);
+  const sat = [.5, .75, 1, 1.18, 1.35][e], con = [.82, .92, 1, 1.07, 1.12][e];
+  return fromHsl([h, Math.min(1, s * sat), Math.max(.04, Math.min(.97, .5 + (l - .5) * con))]);
+}
+function mixPalette(){
+  const ing = byParts(), e = state.mix.energy;
+  if (!ing.length) return [];
+  const a = EMO[ing[0].id].palette, b = ing[1] ? EMO[ing[1].id].palette : null, c = ing[2] ? EMO[ing[2].id].palette : null;
+  const blend = (x, y) => rgbToHex(hexToRgb(x).map((v, i) => (v + hexToRgb(y)[i]) / 2));
+  const deep = b && lum(hexToRgb(b[2])) < lum(hexToRgb(a[2])) && ing[1].parts >= ing[0].parts ? b[2] : a[2];
+  const base = [a[0], a[1], b ? b[1] : blend(a[1], a[2]), deep].map(h => energize(h, e));
+  base.sort((x, y) => lum(hexToRgb(y)) - lum(hexToRgb(x)));
+  return [...base, energize(c ? c[1] : (b ? b[3] : a[3]), e)];
+}
+function mixWords(){
+  const ing = byParts(), e = state.mix.energy, out = [];
+  ing.forEach((x, i) => {
+    const em = EMO[x.id];
+    const pool = e <= 1 ? em.quiet : e >= 3 ? em.lively : [em.quiet[0], em.lively[0]];
+    pool.slice(0, i === 0 ? 2 : 1).forEach(w => { if (!out.includes(w)) out.push(w); });
+  });
+  return out.slice(0, 3);
+}
+function mixTerms(){
+  const e = state.mix.energy, terms = {}, origins = {};
+  for (const [tier] of TIERS){
+    terms[tier] = [];
+    for (const x of state.mix.ing){
+      const list = state.emoTerms[x.id][tier];
+      if (!list.length) continue;
+      const w = Math.min(4, list.length), f = e / 4 * (list.length - w), start = e < 2 ? Math.floor(f) : Math.ceil(f);
+      const win = list.slice(start, start + w);
+      for (let p = 0; p < x.parts; p++) terms[tier].push(...win);
+      win.forEach(t => { if (!origins[t]) origins[t] = x.id; });
+    }
+  }
+  const any = Object.values(terms).flat();
+  for (const [tier] of TIERS) if (!terms[tier].length) terms[tier] = any.slice();
+  return {terms, origins};
+}
+function mixDesc(){
+  const ing = byParts();
+  const parts = ing.map(x => PARTS[x.parts - 1][2] + " " + emoLabel(x.id).toLowerCase());
+  const s = parts.join(", ");
+  return s.charAt(0).toUpperCase() + s.slice(1) + ". " + ENERGY[state.mix.energy] + " energy. Grown from places, light, and materials tied to each feeling.";
+}
+
+function makeSeed(){
+  if (!state.mix.ing.length) return;
+  const e = state.mix.energy, top = byParts()[0].id;
+  const name = ($("#hybridName").value.trim() || hybridName()).slice(0, 28);
+  const {terms, origins} = mixTerms();
+  const atmospheric = ["fear","sadness","love"].includes(top);
+  const seed = {id:"f-" + uid(), mixed:true, name, palette:mixPalette(), words:mixWords(), desc:mixDesc(), terms, origins,
+    soil: e <= 1 || (e === 2 && atmospheric) ? "bleed" : "block",
+    tilt:[.15, .55, 1, 1.6, 2.3][e],
+    recipe:byParts().map(x => emoLabel(x.id))};
+  const prior = state.mixed.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (prior){ state.mixed = state.mixed.filter(s => s !== prior); state.selected = state.selected.filter(id => id !== prior.id); }
+  state.mixed = [...state.mixed, seed].slice(-6);
+  const bumped = state.selected.length >= 3 ? seedById(state.selected[2]) : null;
+  state.selected = [seed.id, ...state.selected].slice(0, 3);
+  $("#mixStatus").textContent = name + (prior ? " updated" : " is ready") + " and picked first, so it sets the soil." + (bumped ? " " + bumped.name + " was set aside to make room." : "") + " Press Plant to grow it.";
+  $("#plantBtn").disabled = false;
+  renderShelf();
+}
+
+function renderMix(){
+  const m = state.mix, model = MODELS[m.model];
+  document.querySelectorAll("#modelSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === m.model));
+  $("#modelNote").textContent = model.note;
+  const chosen = new Set(m.ing.map(x => x.id));
+  $("#emotions").innerHTML = model.list.map(([id, label]) =>
+    '<button class="emo" data-emo="' + id + '" aria-pressed="' + chosen.has(id) + '" style="--c:' + EMO[id].color + '"><i></i>' + esc(label) + '</button>').join("");
+  $("#recipe").innerHTML = m.ing.map(x =>
+    '<li style="--c:' + EMO[x.id].color + '"><i></i><span>' + esc(emoLabel(x.id)) + '</span><span class="seg" role="group" aria-label="How much ' + esc(emoLabel(x.id)) + '">' +
+    PARTS.map(([n, lab]) => '<button data-emo="' + x.id + '" data-parts="' + n + '" aria-pressed="' + (x.parts === n) + '">' + lab + '</button>').join("") + '</span></li>').join("");
+  $("#energy").value = m.energy;
+  $("#energyWord").textContent = ENERGY[m.energy];
+  renderHybrid();
+  const open = $("#translate").open;
+  $("#translateBody").innerHTML = m.ing.length ? m.ing.map(x =>
+    '<h3 style="--c:' + EMO[x.id].color + '"><i></i>' + esc(emoLabel(x.id)) + '</h3>' +
+    TIERS.map(([tier, lab]) => '<label>' + lab + '<textarea rows="2" data-emo="' + x.id + '" data-tier="' + tier + '">' + esc(state.emoTerms[x.id][tier].join(", ")) + '</textarea></label>').join("")
+  ).join("") : '<p class="tnote">Pick an emotion to see its pictures.</p>';
+  $("#translate").open = open;
+  $("#makeBtn").disabled = !m.ing.length;
+}
+function renderHybrid(){
+  const m = state.mix, pal = mixPalette();
+  $("#hybrid").classList.toggle("blank", !m.ing.length);
+  $("#hybridBands").innerHTML = (pal.length ? pal : [0,0,0,0,0]).map(c => '<i style="background:' + (c || "") + '"></i>').join("");
+  if (!m.nameEdited) $("#hybridName").value = hybridName();
+  $("#hybridWords").textContent = m.ing.length ? mixWords().join(", ") + ". Rename it if it reads differently to you or your user." : "Rename it if it reads differently to you or your user.";
+}
+
+$("#modelSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.mix.model = b.dataset.model;
+  const ids = new Set(MODELS[state.mix.model].list.map(([k]) => k));
+  const dropped = state.mix.ing.filter(x => !ids.has(x.id));
+  state.mix.ing = state.mix.ing.filter(x => ids.has(x.id));
+  $("#mixStatus").textContent = dropped.length ? dropped.map(x => EMO[x.id].name).join(" and ") + " isn’t part of this wheel, so it left the recipe." : "";
+  renderMix();
+});
+$("#emotions").addEventListener("click", e => {
+  const b = e.target.closest("button[data-emo]"); if (!b) return;
+  const id = b.dataset.emo, i = state.mix.ing.findIndex(x => x.id === id);
+  if (i > -1) state.mix.ing.splice(i, 1);
+  else if (state.mix.ing.length < 3) state.mix.ing.push({id, parts:2});
+  else { $("#mixStatus").textContent = "Three ingredients is the limit. Remove one to add " + emoLabel(id).toLowerCase() + "."; return; }
+  $("#mixStatus").textContent = "";
+  renderMix();
+});
+$("#recipe").addEventListener("click", e => {
+  const b = e.target.closest("button[data-parts]"); if (!b) return;
+  const x = state.mix.ing.find(x => x.id === b.dataset.emo); if (!x) return;
+  x.parts = +b.dataset.parts; renderMix();
+});
+$("#energy").addEventListener("input", e => { state.mix.energy = +e.target.value; $("#energyWord").textContent = ENERGY[state.mix.energy]; renderHybrid(); });
+$("#hybridName").addEventListener("input", e => { state.mix.nameEdited = !!e.target.value.trim(); });
+$("#translateBody").addEventListener("input", e => {
+  const t = e.target; if (!t.dataset.tier) return;
+  state.emoTerms[t.dataset.emo][t.dataset.tier] = t.value.split(",").map(shortTerm).filter(Boolean);
+});
+$("#makeBtn").addEventListener("click", makeSeed);
 
 /* ---------- Drag helpers ---------- */
 const acceptable = e => { const t = [...(e.dataTransfer?.types || [])]; return t.includes("Files") || t.includes("text/plain"); };
@@ -1114,6 +1388,7 @@ $("#copyCredits").addEventListener("click", async () => {
   catch(e){ notice("Copying was blocked by the browser. Select the list below and copy it by hand."); }
 });
 
+renderMix();
 renderShelf();
 renderAll();
 </script>
